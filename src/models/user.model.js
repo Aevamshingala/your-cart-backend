@@ -1,4 +1,6 @@
-import { mongoose, Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const userSchema = new Schema(
   {
@@ -16,12 +18,21 @@ const userSchema = new Schema(
       lowercase: true,
       trim: true,
     },
+    gender: {
+      type: String,
+      required: true,
+      enum: ["male", "female"],
+    },
     email: {
       type: String,
       required: true,
       unique: true,
       trim: true,
       lowercase: true,
+      validate: {
+        validator: (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+        message: "Invalid email format",
+      },
     },
     password: {
       type: String,
@@ -33,10 +44,54 @@ const userSchema = new Schema(
     refreshToken: {
       type: String,
     },
+    likePost: {
+      type: Schema.Types.ObjectId,
+      ref: "post",
+    },
   },
   {
     timestamps: true,
   }
 );
 
-export const User = mongoose.model("User", userSchema);
+userSchema.pre("save", async (next) => {
+  if (!this.isModified(password)) return next();
+
+  this.password = await bcrypt.hash(this.password, 10);
+  return next();
+});
+
+userSchema.methods.isPasswordCorrect = async (password) => {
+  return await bcrypt.compare(password, this.password);
+};
+
+userSchema.methods.generateAccessToken = () => {
+  return jwt.sign(
+    {
+      _id: this._id,
+      userName: this.userName,
+      fullName: this.fullName,
+      email: this.email,
+      gender: this.gender,
+      avatar: this.avatar,
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    {
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
+    }
+  );
+};
+
+userSchema.methods.generateRefreshToken = () => {
+  return jwt.sign(
+    {
+      _id: this._id,
+    },
+    process.env.REFRESH_TOKEN_SECRET,
+    {
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+    }
+  );
+};
+
+export const user = mongoose.model("user", userSchema);

@@ -3,7 +3,7 @@ class Apiresponce {
     (this.statusCode = statusCode),
       (this.data = data),
       (this.message = message),
-      (success = true);
+      (this.success = true);
   }
 }
 

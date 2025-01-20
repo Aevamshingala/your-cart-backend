@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(cookieParser());
 app.use(express.static("public"));
 
-app.use((err, _, res, _) => {
+app.use((err, _, res, next) => {
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
     success: err.success,
@@ -23,3 +23,9 @@ app.use((err, _, res, _) => {
     error: err.errors || [],
   });
 });
+
+app.get("/", (req, res) => {
+  res.send("Hello from Express!");
+});
+
+export { app };
